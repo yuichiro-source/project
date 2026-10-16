@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTG自己分析</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>MTG自己分析</h1>
+  <div class="kpis" id="kpis"></div>
+  <label class="self">自分の話者名 <input id="selfName" placeholder="例: 山田" size="8"></label>
+</header>
+
+<main>
+  <section class="left">
+    <form id="form" class="card">
+      <div class="row">
+        <input name="client" id="client" placeholder="クライアント名 *" list="clients" required autocomplete="off">
+        <datalist id="clients"></datalist>
+        <input name="date" type="date" id="date">
+      </div>
+      <div class="row">
+        <div class="seg" id="typeSeg">
+          <label><input type="radio" name="type" value="オリエン" checked><span>オリエン</span></label>
+          <label><input type="radio" name="type" value="中間"><span>中間</span></label>
+          <label><input type="radio" name="type" value="プレゼン"><span>プレゼン</span></label>
+          <label><input type="radio" name="type" value="その他"><span>その他</span></label>
+        </div>
+        <input name="title" placeholder="MTG名（任意）">
+      </div>
+      <div class="row">
+        <div class="seg small" id="srcSeg">
+          <label><input type="radio" name="src" value="text" checked><span>テキスト</span></label>
+          <label><input type="radio" name="src" value="gdoc"><span>Googleドキュメント</span></label>
+        </div>
+      </div>
+      <textarea name="text" id="text" rows="5" placeholder="文字起こしを貼り付け"></textarea>
+      <input name="docUrl" id="docUrl" class="hidden" placeholder="https://docs.google.com/document/d/...（リンク共有で閲覧可にしてください）">
+      <div class="row end">
+        <span id="formMsg" class="msg"></span>
+        <button type="submit" id="submitBtn">分析する</button>
+      </div>
+    </form>
+
+    <div class="card list">
+      <div class="row">
+        <input id="q" placeholder="絞り込み（クライアント名）">
+        <select id="fType"><option value="">全種別</option><option>オリエン</option><option>中間</option><option>プレゼン</option><option>その他</option></select>
+      </div>
+      <table>
+        <thead><tr><th>日付</th><th>クライアント</th><th>種別</th><th class="num">点</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p id="empty" class="muted hidden">まだMTGがありません。上のフォームから文字起こしを分析してください。</p>
+    </div>
+
+    <div class="card" id="issuesCard">
+      <h3>よくあるミス</h3>
+      <ul id="issues" class="issues"></ul>
+    </div>
+  </section>
+
+  <section class="right card" id="detail">
+    <p class="muted">左の一覧からMTGを選択すると分析結果を表示します。</p>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
