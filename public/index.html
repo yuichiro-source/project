@@ -9,11 +9,16 @@
 <body>
 <header>
   <h1>MTG自己分析</h1>
+  <nav class="tabs">
+    <a href="#meetings" data-tab="meetings">MTG分析</a>
+    <a href="#questions" data-tab="questions">よく出る質問</a>
+  </nav>
   <div class="kpis" id="kpis"></div>
-  <label class="self">自分の話者名 <input id="selfName" placeholder="例: 山田" size="8"></label>
+  <label class="self">自分 <input id="selfName" placeholder="話者名" size="6"></label>
+  <label class="self">上長 <input id="bossName" placeholder="話者名" size="6"></label>
 </header>
 
-<main>
+<main id="view-meetings">
   <section class="left">
     <form id="form" class="card">
       <div class="row">
@@ -28,7 +33,8 @@
           <label><input type="radio" name="type" value="プレゼン"><span>プレゼン</span></label>
           <label><input type="radio" name="type" value="その他"><span>その他</span></label>
         </div>
-        <input name="title" placeholder="MTG名（任意）">
+        <input name="title" id="title" placeholder="案件名（任意）" list="titles" autocomplete="off">
+        <datalist id="titles"></datalist>
       </div>
       <div class="row">
         <div class="seg small" id="srcSeg">
@@ -45,12 +51,8 @@
     </form>
 
     <div class="card list">
-      <div class="row">
-        <input id="q" placeholder="絞り込み（クライアント名）">
-        <select id="fType"><option value="">全種別</option><option>オリエン</option><option>中間</option><option>プレゼン</option><option>その他</option></select>
-      </div>
       <table>
-        <thead><tr><th>日付</th><th>クライアント</th><th>種別</th><th class="num">点</th><th></th></tr></thead>
+        <thead><tr><th>案件 / MTG</th><th>種別</th><th class="num">点</th><th></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <p id="empty" class="muted hidden">まだMTGがありません。上のフォームから文字起こしを分析してください。</p>
@@ -64,6 +66,23 @@
 
   <section class="right card" id="detail">
     <p class="muted">左の一覧からMTGを選択すると分析結果を表示します。</p>
+  </section>
+</main>
+
+<main id="view-questions" class="single hidden">
+  <section class="card">
+    <div class="row q-head">
+      <h2>上長がよくする質問</h2>
+      <div class="seg small" id="qTypeSeg">
+        <label><input type="radio" name="qType" value="" checked><span>全種別</span></label>
+        <label><input type="radio" name="qType" value="オリエン"><span>オリエン</span></label>
+        <label><input type="radio" name="qType" value="中間"><span>中間</span></label>
+        <label><input type="radio" name="qType" value="プレゼン"><span>プレゼン</span></label>
+        <label><input type="radio" name="qType" value="その他"><span>その他</span></label>
+      </div>
+    </div>
+    <p class="muted small-note">上長がサポートでお客様に質問した内容を種類ごとに集計しています。回数が多いものほど、次回から自分で聞けるようにしておきたい質問です。</p>
+    <div id="qList"></div>
   </section>
 </main>
 

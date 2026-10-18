@@ -15,6 +15,10 @@ app.get('/api/meetings', (req, res) => {
   res.json({ meetings, issues: store.listIssues().sort((a, b) => b.count - a.count) });
 });
 
+app.get('/api/questions', (req, res) => {
+  res.json({ categories: store.questionSummary(), meetingCount: store.listMeetings().length });
+});
+
 app.get('/api/meetings/:id', (req, res) => {
   const m = store.getMeeting(req.params.id);
   m ? res.json(m) : res.status(404).json({ error: '見つかりません' });
@@ -26,7 +30,7 @@ app.delete('/api/meetings/:id', (req, res) => {
 
 app.post('/api/meetings', async (req, res) => {
   try {
-    const { client, type, title = '', date, selfName = '', text = '', docUrl = '' } = req.body || {};
+    const { client, type, title = '', date, selfName = '', bossName = '', text = '', docUrl = '' } = req.body || {};
     if (!client?.trim()) return res.status(400).json({ error: 'クライアント名を入力してください' });
     if (!TYPES.includes(type)) return res.status(400).json({ error: 'MTG種別を選択してください' });
 
@@ -34,7 +38,11 @@ app.post('/api/meetings', async (req, res) => {
     if (transcript.length < 50) return res.status(400).json({ error: '文字起こしが短すぎます' });
 
     const issues = store.listIssues();
-    const input = { client: client.trim(), type, title: title.trim(), selfName: selfName.trim(), transcript, issues };
+    const questionCats = store.listQuestionCats();
+    const input = {
+      client: client.trim(), type, title: title.trim(), selfName: selfName.trim(), bossName: bossName.trim(),
+      transcript, issues, questionCats,
+    };
     const result = process.env.MOCK_ANALYSIS ? mockAnalyze(input) : await analyzeTranscript(input);
 
     // 同じミスの検出: 過去の MTG に同じ issue_key があればアラート
