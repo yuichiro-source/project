@@ -3,11 +3,6 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 
 let state = { meetings: [], issues: [], selected: null, open: new Set(), questions: [] };
 
-const storage = {
-  get(k) { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
-};
-
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
   const data = await res.json().catch(() => ({}));
@@ -156,15 +151,24 @@ async function showDetail(id) {
   };
 }
 
-// ---- よく出る質問タブ ----
-async function loadQuestions() {
-  state.questions = (await api('/api/questions')).categories;
-  renderQuestions();
-}
+// ---- 集計タブ（よく出る質問 / 指摘・アドバイス） ----
+const PAGES = {
+  questions: { api: '/api/questions', radio: 'qType', quote: true, empty: 'まだ上長の質問が記録されていません。' },
+  advice: { api: '/api/issues', radio: 'aType', quote: false, empty: 'まだ指摘が記録されていません。' },
+};
 
-function renderQuestions() {
-  const t = document.querySelector('input[name=qType]:checked').value;
-  const cats = state.questions
+async function loadPage(name) {
+  const cats = (await api(PAGES[name].api)).categories;
+  if (name === 'questions') state.questions = cats;
+  state[`${name}Cats`] = cats;
+  renderPage(name);
+}
+const loadQuestions = () => loadPage('questions');
+
+function renderPage(name) {
+  const page = PAGES[name];
+  const t = document.querySelector(`input[name=${page.radio}]:checked`).value;
+  const cats = (state[`${name}Cats`] || [])
     .map((c) => {
       const items = t ? c.items.filter((i) => i.type === t) : c.items;
       return { ...c, items, count: new Set(items.map((i) => i.meetingId)).size };
@@ -172,7 +176,7 @@ function renderQuestions() {
     .filter((c) => c.items.length)
     .sort((a, b) => b.count - a.count || b.items.length - a.items.length);
 
-  $('#qList').innerHTML = cats.length ? cats.map((c, idx) => `
+  $(`#view-${name} .agg-list`).innerHTML = cats.length ? cats.map((c, idx) => `
     <details class="qcat" ${idx < 3 ? 'open' : ''}>
       <summary>
         <span class="rank">${idx + 1}</span>
@@ -181,19 +185,18 @@ function renderQuestions() {
         <span class="cnt ${c.count >= 2 ? 'warn' : ''}">${c.count}回</span>
       </summary>
       <ul>${c.items.map((i) => `
-        <li><a href="#meetings" data-open="${i.meetingId}">「${esc(i.question)}」</a>
+        <li><a href="#meetings" data-open="${i.meetingId}">${page.quote ? `「${esc(i.text)}」` : esc(i.text)}</a>
           <span class="muted"> ${shortDate(i.date)} ${esc(i.client)}${i.title ? `/${esc(i.title)}` : ''}・${esc(i.type)}</span>
-          <span class="adv">${esc(i.why)}</span></li>`).join('')}</ul>
-    </details>`).join('') : '<p class="muted">まだ上長の質問が記録されていません。</p>';
+          <span class="adv">${esc(i.note)}</span></li>`).join('')}</ul>
+    </details>`).join('') : `<p class="muted">${page.empty}</p>`;
 }
 
 // ---- タブ切り替え ----
 function route() {
-  const tab = location.hash === '#questions' ? 'questions' : 'meetings';
-  $('#view-meetings').classList.toggle('hidden', tab !== 'meetings');
-  $('#view-questions').classList.toggle('hidden', tab !== 'questions');
+  const tab = location.hash.slice(1) in PAGES ? location.hash.slice(1) : 'meetings';
+  for (const v of ['meetings', ...Object.keys(PAGES)]) $(`#view-${v}`).classList.toggle('hidden', tab !== v);
   document.querySelectorAll('.tabs a').forEach((a) => a.classList.toggle('active', a.dataset.tab === tab));
-  if (tab === 'questions') loadQuestions().catch((err) => alert(err.message));
+  if (PAGES[tab]) loadPage(tab).catch((err) => alert(err.message));
 }
 window.addEventListener('hashchange', route);
 
@@ -215,7 +218,6 @@ $('#form').addEventListener('submit', async (e) => {
   const gdoc = fd.get('src') === 'gdoc';
   const body = {
     client: fd.get('client'), type: fd.get('type'), title: fd.get('title'), date: fd.get('date'),
-    selfName: $('#selfName').value, bossName: $('#bossName').value,
     text: gdoc ? '' : fd.get('text'), docUrl: gdoc ? fd.get('docUrl') : '',
   };
   if (!body.text.trim() && !body.docUrl.trim()) return setMsg('文字起こしかURLを入力してください', true);
@@ -247,16 +249,14 @@ $('#rows').addEventListener('click', (e) => {
   }
 });
 
-$('#qTypeSeg').addEventListener('change', renderQuestions);
-$('#qList').addEventListener('click', (e) => {
-  const a = e.target.closest('a[data-open]');
-  if (a) showDetail(a.dataset.open);
-});
-
-for (const id of ['selfName', 'bossName']) {
-  $(`#${id}`).value = storage.get(id);
-  $(`#${id}`).addEventListener('change', (e) => storage.set(id, e.target.value));
+for (const name of Object.keys(PAGES)) {
+  $(`#view-${name} .type-filter`).addEventListener('change', () => renderPage(name));
+  $(`#view-${name} .agg-list`).addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-open]');
+    if (a) showDetail(a.dataset.open);
+  });
 }
+
 $('#date').value = new Date().toLocaleDateString('sv');
 
 route();

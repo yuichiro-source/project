@@ -12,10 +12,9 @@
   <nav class="tabs">
     <a href="#meetings" data-tab="meetings">MTG分析</a>
     <a href="#questions" data-tab="questions">よく出る質問</a>
+    <a href="#advice" data-tab="advice">指摘・アドバイス</a>
   </nav>
   <div class="kpis" id="kpis"></div>
-  <label class="self">自分 <input id="selfName" placeholder="話者名" size="6"></label>
-  <label class="self">上長 <input id="bossName" placeholder="話者名" size="6"></label>
 </header>
 
 <main id="view-meetings">
@@ -73,7 +72,7 @@
   <section class="card">
     <div class="row q-head">
       <h2>上長がよくする質問</h2>
-      <div class="seg small" id="qTypeSeg">
+      <div class="seg small type-filter">
         <label><input type="radio" name="qType" value="" checked><span>全種別</span></label>
         <label><input type="radio" name="qType" value="オリエン"><span>オリエン</span></label>
         <label><input type="radio" name="qType" value="中間"><span>中間</span></label>
@@ -82,7 +81,24 @@
       </div>
     </div>
     <p class="muted small-note">上長がサポートでお客様に質問した内容を種類ごとに集計しています。回数が多いものほど、次回から自分で聞けるようにしておきたい質問です。</p>
-    <div id="qList"></div>
+    <div class="agg-list"></div>
+  </section>
+</main>
+
+<main id="view-advice" class="single hidden">
+  <section class="card">
+    <div class="row q-head">
+      <h2>よく受ける指摘・アドバイス</h2>
+      <div class="seg small type-filter">
+        <label><input type="radio" name="aType" value="" checked><span>全種別</span></label>
+        <label><input type="radio" name="aType" value="オリエン"><span>オリエン</span></label>
+        <label><input type="radio" name="aType" value="中間"><span>中間</span></label>
+        <label><input type="radio" name="aType" value="プレゼン"><span>プレゼン</span></label>
+        <label><input type="radio" name="aType" value="その他"><span>その他</span></label>
+      </div>
+    </div>
+    <p class="muted small-note">MTGの分析で指摘された改善点と、次回へのアドバイスを種類ごとに集計しています。回数が多いものほど癖になっている可能性が高い指摘です。</p>
+    <div class="agg-list"></div>
   </section>
 </main>
 
