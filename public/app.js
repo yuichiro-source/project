@@ -92,7 +92,7 @@ async function showDetail(id) {
         <div class="muted"><span class="badge">${esc(m.type)}</span> ${esc(m.date)}${m.source?.kind === 'gdoc' ? ` ・ <a href="${esc(m.source.url)}" target="_blank" rel="noopener">元ドキュメント</a>` : ''}</div>
         <p class="summary">${esc(m.summary)}</p>
       </div>
-      <div class="review">
+      <div class="review" style="--s:${m.score}">
         <div class="big ${scoreClass(m.score)}">${m.score}<small>/10</small></div>
         <div><b>総評</b>${esc(review)}</div>
       </div>
