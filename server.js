@@ -20,7 +20,7 @@ app.get('/api/questions', (req, res) => {
 });
 
 app.get('/api/issues', (req, res) => {
-  res.json({ categories: store.issueSummary() });
+  res.json(store.issueSummary());
 });
 
 app.get('/api/meetings/:id', (req, res) => {
@@ -46,11 +46,12 @@ app.post('/api/meetings', async (req, res) => {
     const input = { client: client.trim(), type, title: title.trim(), transcript, issues, questionCats };
     const result = process.env.MOCK_ANALYSIS ? mockAnalyze(input) : await analyzeTranscript(input);
 
-    // 同じミスの検出: 過去の MTG に同じ issue_key があればアラート
+    // 同じミスの検出: 過去の MTG（AI の改善点・上長の指摘）に同じ issue_key があればアラート
     const past = store.listMeetings();
     const alerts = [];
-    for (const imp of result.improvements) {
-      const hits = past.filter((m) => m.improvements.some((i) => i.issue_key === imp.issue_key));
+    const hasKey = (m, key) => [...m.improvements, ...m.supervisor_feedback].some((i) => i.issue_key === key);
+    for (const imp of [...result.improvements, ...result.supervisor_feedback]) {
+      const hits = past.filter((m) => hasKey(m, imp.issue_key));
       if (hits.length && !alerts.some((a) => a.issue_key === imp.issue_key)) {
         alerts.push({
           issue_key: imp.issue_key,

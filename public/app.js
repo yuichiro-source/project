@@ -21,7 +21,6 @@ async function refresh() {
   state.issues = data.issues;
   renderKpis();
   renderList();
-  renderIssues();
   $('#clients').innerHTML = [...new Set(state.meetings.map((m) => m.client))].map((c) => `<option value="${esc(c)}">`).join('');
   $('#titles').innerHTML = [...new Set(state.meetings.map((m) => m.title).filter(Boolean))].map((t) => `<option value="${esc(t)}">`).join('');
 }
@@ -73,12 +72,6 @@ function renderList() {
   $('#empty').classList.toggle('hidden', state.meetings.length > 0);
 }
 
-function renderIssues() {
-  const top = state.issues.slice(0, 8);
-  $('#issuesCard').classList.toggle('hidden', !top.length);
-  $('#issues').innerHTML = top.map((i) => `<li class="${i.count >= 2 ? 'rep' : ''}"><span>${esc(i.label)}</span><span>${i.count}回</span></li>`).join('');
-}
-
 async function showDetail(id) {
   state.selected = id;
   const m = await api(`/api/meetings/${id}`);
@@ -89,6 +82,7 @@ async function showDetail(id) {
   const issueCount = Object.fromEntries(state.issues.map((i) => [i.key, i.count]));
   const qCount = Object.fromEntries(state.questions.map((q) => [q.key, q.count]));
   const sq = m.supervisor_questions || [];
+  const sf = m.supervisor_feedback || [];
   const review = m.review || m.score_reason || '';
 
   $('#detail').innerHTML = `
@@ -111,12 +105,19 @@ async function showDetail(id) {
         <ul>${m.good_points.map((g) => `<li>${esc(g)}</li>`).join('')}</ul>
       </div>
       <div>
-        <h3 class="b">改善点（${m.improvements.length}）</h3>
+        <h3 class="b">改善点（${m.improvements.length}）<span class="src-badge ai">AI</span></h3>
         <ul>${m.improvements.map((i) => `
           <li>${esc(i.text)}
             <span class="tag ${repeated.has(i.issue_key) ? 'rep' : ''}">${esc(i.issue_label)}${(issueCount[i.issue_key] || 0) >= 2 ? ` ×${issueCount[i.issue_key]}` : ''}</span>
             <span class="adv">${esc(i.advice)}</span></li>`).join('')}</ul>
       </div>
+    </div>
+    <div class="sq">
+      <h3 class="boss">上長からの指摘・アドバイス（${sf.length}）<span class="src-badge boss">上長</span></h3>
+      ${sf.length ? `<ul>${sf.map((f) => `
+        <li>「${esc(f.text)}」
+          <span class="tag ${repeated.has(f.issue_key) ? 'rep' : ''}">${esc(f.issue_label)}${(issueCount[f.issue_key] || 0) >= 2 ? ` ×${issueCount[f.issue_key]}` : ''}</span>
+          <span class="adv">${esc(f.advice)}</span></li>`).join('')}</ul>` : '<p class="muted">上長からの指摘はありませんでした。</p>'}
     </div>
     <div class="sq">
       <h3 class="q">上長のサポート質問（${sq.length}）</h3>
@@ -136,7 +137,8 @@ async function showDetail(id) {
       `【${m.client}${m.title ? ` / ${m.title}` : ''} / ${m.type}】${m.date}  ${m.score}/10`,
       `総評: ${review}`, '',
       '■良かった点', ...m.good_points.map((g) => `・${g}`), '',
-      '■改善点', ...m.improvements.map((i) => `・${i.text}\n  → ${i.advice}`),
+      '■改善点（AI分析）', ...m.improvements.map((i) => `・${i.text}\n  → ${i.advice}`),
+      ...(sf.length ? ['', '■上長からの指摘・アドバイス', ...sf.map((f) => `・「${f.text}」\n  → ${f.advice}`)] : []),
       ...(sq.length ? ['', '■上長のサポート質問', ...sq.map((q) => `・「${q.question}」\n  → ${q.why}`)] : []),
       ...(m.alerts?.length ? ['', '■繰り返しミス', ...m.alerts.map((a) => `・${a.issue_label}（${a.times}回目）`)] : []),
     ].join('\n');
@@ -154,21 +156,27 @@ async function showDetail(id) {
 // ---- 集計タブ（よく出る質問 / 指摘・アドバイス） ----
 const PAGES = {
   questions: { api: '/api/questions', radio: 'qType', quote: true, empty: 'まだ上長の質問が記録されていません。' },
-  advice: { api: '/api/issues', radio: 'aType', quote: false, empty: 'まだ指摘が記録されていません。' },
+  advice: { api: '/api/issues', radio: 'aType', quote: false, empty: 'まだ記録されていません。' },
 };
 
 async function loadPage(name) {
-  const cats = (await api(PAGES[name].api)).categories;
-  if (name === 'questions') state.questions = cats;
-  state[`${name}Cats`] = cats;
+  const data = await api(PAGES[name].api);
+  if (name === 'questions') state.questions = data.categories;
+  // 1ページに複数のリスト（指摘ページは上長 / AI）を持てるよう、data-source ごとに保持
+  state[`${name}Cats`] = name === 'questions' ? { default: data.categories } : data;
   renderPage(name);
 }
 const loadQuestions = () => loadPage('questions');
 
 function renderPage(name) {
-  const page = PAGES[name];
+  for (const el of document.querySelectorAll(`#view-${name} .agg-list`)) {
+    renderAgg(el, PAGES[name], (state[`${name}Cats`] || {})[el.dataset.source || 'default'] || []);
+  }
+}
+
+function renderAgg(el, page, all) {
   const t = document.querySelector(`input[name=${page.radio}]:checked`).value;
-  const cats = (state[`${name}Cats`] || [])
+  const cats = all
     .map((c) => {
       const items = t ? c.items.filter((i) => i.type === t) : c.items;
       return { ...c, items, count: new Set(items.map((i) => i.meetingId)).size };
@@ -176,7 +184,7 @@ function renderPage(name) {
     .filter((c) => c.items.length)
     .sort((a, b) => b.count - a.count || b.items.length - a.items.length);
 
-  $(`#view-${name} .agg-list`).innerHTML = cats.length ? cats.map((c, idx) => `
+  el.innerHTML = cats.length ? cats.map((c, idx) => `
     <details class="qcat" ${idx < 3 ? 'open' : ''}>
       <summary>
         <span class="rank">${idx + 1}</span>
@@ -251,8 +259,8 @@ $('#rows').addEventListener('click', (e) => {
 
 for (const name of Object.keys(PAGES)) {
   $(`#view-${name} .type-filter`).addEventListener('change', () => renderPage(name));
-  $(`#view-${name} .agg-list`).addEventListener('click', (e) => {
-    const a = e.target.closest('a[data-open]');
+  $(`#view-${name}`).addEventListener('click', (e) => {
+    const a = e.target.closest('.agg-list a[data-open]');
     if (a) showDetail(a.dataset.open);
   });
 }

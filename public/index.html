@@ -56,11 +56,6 @@
       </table>
       <p id="empty" class="muted hidden">まだMTGがありません。上のフォームから文字起こしを分析してください。</p>
     </div>
-
-    <div class="card" id="issuesCard">
-      <h3>よくあるミス</h3>
-      <ul id="issues" class="issues"></ul>
-    </div>
   </section>
 
   <section class="right card" id="detail">
@@ -97,8 +92,11 @@
         <label><input type="radio" name="aType" value="その他"><span>その他</span></label>
       </div>
     </div>
-    <p class="muted small-note">MTGの分析で指摘された改善点と、次回へのアドバイスを種類ごとに集計しています。回数が多いものほど癖になっている可能性が高い指摘です。</p>
-    <div class="agg-list"></div>
+    <p class="muted small-note">上長から受けた指摘と、AI分析で出た改善点を、それぞれ種類ごとに集計しています。回数が多いものほど癖になっている可能性が高い指摘です。</p>
+    <h3 class="src"><span class="src-badge boss">上長</span>上長からの指摘・アドバイス</h3>
+    <div class="agg-list" data-source="supervisor"></div>
+    <h3 class="src"><span class="src-badge ai">AI</span>AI分析の指摘・アドバイス</h3>
+    <div class="agg-list" data-source="ai"></div>
   </section>
 </main>
 
